@@ -55,7 +55,9 @@ briscola/
   arena.py        partite tra agenti e valutazione "duplicate"
   compare.py      confronto tra agenti da terminale
   play.py         giocare contro un bot da terminale
-tests/            37 test (pytest)
+  env.py, learners.py, train.py, experiment.py
+                  ambiente di addestramento RL (vedi docs/ambiente.md)
+tests/            test (pytest)
 ```
 
 ### 2.1 Carte (`cards.py`)
@@ -179,7 +181,7 @@ Tutto è **riproducibile**: lo stesso seed dà gli stessi mazzi e le stesse scel
 
 ```bash
 pip install -e ".[dev]"             # installa il pacchetto e pytest
-python -m pytest                    # 37 test, meno di 1 secondo
+python -m pytest                    # tutti i test, pochi secondi
 python -m briscola.play             # gioca contro il bot greedy
 python -m briscola.play --reduced   # ... sul mazzo ridotto da 6 carte
 python -m briscola.compare --a greedy --b random --deals 5000
@@ -268,7 +270,7 @@ Questo è **il dato chiave per la direzione 2**: la crescita è molto ripida. Co
 
 **Prossimi passi — direzione 1 (memoria e RL)**
 
-1. Un wrapper stile *Gym* (`reset` / `step`) che gestisce l'avversario e restituisce `encode(obs)`, `action_mask(obs)` e il reward finale.
+1. ~~Un wrapper stile *Gym* (`reset` / `step`) che gestisce l'avversario e restituisce `encode(obs)`, `action_mask(obs)` e il reward.~~ Fatto: `BriscolaEnv`, vedi [`ambiente.md`](ambiente.md).
 2. Un algoritmo RL (per esempio DQN con mascheramento delle azioni, oppure PPO) in PyTorch, addestrato con `memory=False` e con `memory=True` a parità di rete, budget e avversari.
 3. Un risolutore esatto per le ultime 3 prese (minimax sullo stato a informazione perfetta, già possibile con `clone()`), per misurare l'accuratezza nel finale.
 4. Valutazione con `evaluate` su più seed di addestramento e avversari esclusi dall'addestramento.
