@@ -15,7 +15,7 @@ from pathlib import Path
 from .agents import AGENTS, Agent, make_agent
 from .arena import evaluate
 from .env import REWARD_MODES, BriscolaEnv
-from .learners import LinearQLearner
+from .learners import FeatureQLearner, LinearQLearner
 from .rules import STANDARD, GameConfig
 
 EVAL_SEED = 10_000
@@ -30,7 +30,7 @@ def epsilon_at(episode: int, total: int, start: float, end: float, decay_fractio
 
 
 def train(
-    learner: LinearQLearner,
+    learner: LinearQLearner | FeatureQLearner,
     env: BriscolaEnv,
     episodes: int,
     *,
@@ -79,11 +79,13 @@ def train(
         run_eval(0, epsilon_start)
     for ep in range(1, episodes + 1):
         epsilon = epsilon_at(ep - 1, episodes, epsilon_start, epsilon_end, decay_fraction)
-        x, info = env.reset()
+        _, info = env.reset()
+        x = learner.featurize(env.observation())
         done = False
         while not done:
             a = learner.select_action(x, info["action_mask"], rng, epsilon)
-            x_next, reward, done, _, info = env.step(a)
+            _, reward, done, _, info = env.step(a)
+            x_next = learner.featurize(env.observation())
             learner.update(x, a, reward, x_next, info["action_mask"], done)
             x = x_next
         outcomes.append(info["outcome"])
@@ -107,9 +109,11 @@ def _agents(names: str) -> list[Agent]:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Addestra un agente Q-learning lineare.")
+    parser = argparse.ArgumentParser(description="Addestra un agente Q-learning lineare (stato o feature per carta).")
     parser.add_argument("--memory", action=argparse.BooleanOptionalAction, default=True,
                         help="encoding con le carte già giocate (default) o --no-memory")
+    parser.add_argument("--features", action="store_true",
+                        help="usa FeatureQLearner (feature per carta) invece del learner lineare")
     parser.add_argument("--episodes", type=int, default=50_000)
     parser.add_argument("--opponents", default="random,lowest,greedy",
                         help=f"avversari di addestramento, separati da virgole: {sorted(AGENTS)}")
@@ -127,7 +131,10 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     config = GameConfig.reduced() if args.reduced else STANDARD
     env = BriscolaEnv(_agents(args.opponents), config, memory=args.memory, reward=args.reward)
-    learner = LinearQLearner(config, args.memory, lr=args.lr)
+    if args.features:
+        learner = FeatureQLearner(config, lr=args.lr)
+    else:
+        learner = LinearQLearner(config, args.memory, lr=args.lr)
 
     def show(row: dict) -> None:
         print(f"ep {row['episode']:>7}  eps {row['epsilon']:.3f}  vs {row['opponent']:<7} "

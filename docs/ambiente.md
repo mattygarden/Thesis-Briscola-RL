@@ -11,7 +11,8 @@ Tutto resta in **Python puro, senza dipendenze**.
 | File | Contenuto | Ruolo |
 |---|---|---|
 | `briscola/env.py` | `BriscolaEnv` | Una partita vista da un agente che impara: `reset()` / `step(azione)` |
-| `briscola/learners.py` | `LinearQLearner` | Agente di riferimento: Q-learning con approssimazione lineare |
+| `briscola/learners.py` | `LinearQLearner`, `FeatureQLearner` | Q-learning lineare: sul vettore stato, oppure su feature per carta con pesi condivisi |
+| `briscola/features.py` | `action_features()` | Le 16 feature φ(s, a) per ogni carta legale (probabilità di non essere battuta, punti a rischio, …) |
 | `briscola/train.py` | `train()`, CLI `python -m briscola.train` | Ciclo di addestramento con valutazioni periodiche |
 | `briscola/experiment.py` | CLI `python -m briscola.experiment` | Esperimento memoria: agente base contro agente con memoria, più seed, in parallelo |
 | `briscola/stats.py` | `welch_t_test()`, `holm_adjust()` | Test statistici per confrontare le condizioni tra seed |
@@ -118,6 +119,45 @@ Parametri: `lr` (default 0,2, scelto con prove preliminari tra 0,05, 0,2 e 0,5) 
 
 ---
 
+## 3b. `FeatureQLearner` e feature per carta
+
+Invece di un solo vettore stato, ogni carta legale riceve un **suo** vettore di 16 numeri φ(s, a), che descrive quella carta in quella situazione (`briscola/features.py`). Il modello è lineare con **pesi condivisi** da tutte le carte:
+
+```
+Q(s, a) = somma_i w[i] * phi_i(s, a)        (16 parametri in tutto)
+```
+
+Quello che impara su una carta vale per tutte: "una carta sicura è buona quando…", non "il Re di Coppe è buono quando…".
+
+| # | Feature | Definizione |
+|---|---|---|
+| 1 | `is_trump` | La carta è di briscola (0/1) |
+| 2 | `points` | Punti della carta / 11 |
+| 3 | `strength` | Forza nel suo seme / 9 |
+| 4 | `p_not_beaten` | Di mano: probabilità che l'avversario non abbia nessuna carta capace di batterla. Rispondendo: 1 se prende, 0 se no |
+| 5 | `top_of_suit` | Nessuna carta più forte del suo seme è ancora fuori vista |
+| 6 | `wins_trick` | Rispondendo: prende la carta sul tavolo (0/1) |
+| 7 | `trick_points_if_win` | Rispondendo e prendendo: punti della presa / 22 |
+| 8 | `trump_x_stock` | Briscola × carte rimaste nel mazzo / 34 |
+| 9 | `points_x_leading` | Punti × sono di mano |
+| 10 | `points_at_risk` | Punti × (1 − `p_not_beaten`): punti che si rischia di regalare |
+| 11 | `trump_x_table_points` | Briscola × punti sul tavolo / 11 |
+| 12 | `trump_x_trumps_unseen` | Briscola × briscole ancora fuori vista / 10 |
+| 13 | `wins_x_points_needed` | Prende × punti che mancano per vincere / 60 |
+| 14 | `points_x_points_left` | Punti × punti ancora fuori vista / 120 |
+| 15 | `leading_x_p_not_beaten` | Sono di mano × `p_not_beaten` |
+| 16 | `bias` | Costante 1 |
+
+**La probabilità di non essere battuta** (feature 4) è ipergeometrica. Se k delle U carte non viste battono la carta e l'avversario ha h carte ignote, vale C(U − k, h) / C(U, h). Si assume che la mano avversaria sia un sottoinsieme casuale delle carte non viste; una carta avversaria nota (la briscola pescata) che batte la carta la porta a 0. Esempio: al primo turno un Asso non di briscola, senza briscole in mano, vale C(28,3)/C(36,3) ≈ 0,46. A mazzo vuoto la probabilità è sempre 0 o 1.
+
+**Perché le feature incrociate (8–15).** In un modello lineare con pesi condivisi, una feature uguale per tutte le carte (per esempio "carte nel mazzo") aggiunge lo stesso valore a ogni carta e non cambia mai la scelta. Il contesto conta solo moltiplicato per qualcosa della carta.
+
+Le feature usano le carte già uscite (attraverso `unseen_cards`), quindi sono una forma **elaborata** di memoria: le inferenze le calcoliamo noi, il modello impara quanto pesarle. Contengono anche idee strategiche nostre (per esempio "conserva le briscole"); il modello non le scopre, le pesa. È un limite da dichiarare.
+
+`FeatureQLearner` ha la stessa interfaccia di `LinearQLearner` (`featurize`, `select_action`, `update`, `act`, `save`, `load`) più `weights()`, che restituisce il peso appreso di ogni feature per nome. Da terminale: `python -m briscola.train --features`.
+
+---
+
 ## 4. `train`
 
 ```python
@@ -177,7 +217,7 @@ print(evaluate(agent, GreedyAgent(), 2000))
 python -m briscola.experiment --episodes 100000 --seeds 4 --out results/memory-linear
 ```
 
-Per ogni seed addestra due learner identici, uno per condizione (`basic` e `memory`), cambiando solo l'encoding. I run girano in processi paralleli (`--workers`, di default tutti i core). Alla fine ogni agente è valutato su `--final-deals` mazzi nuovi (default 2.000, cioè 4.000 partite per avversario), con un seed di valutazione diverso da quello delle curve.
+Per ogni seed addestra un learner per ogni condizione: `basic` (learner lineare, stato senza carte uscite), `memory` (stesso learner, stato con le carte uscite) e `features` (`FeatureQLearner`, memoria elaborata). Addestramento, avversari, reward e valutazione sono identici. `--conditions` sceglie quali condizioni eseguire (default tutte e tre). I run girano in processi paralleli (`--workers`, di default tutti i core). Alla fine ogni agente è valutato su `--final-deals` mazzi nuovi (default 2.000, cioè 4.000 partite per avversario), con un seed di valutazione diverso da quello delle curve.
 
 File prodotti nella cartella `--out`:
 
@@ -187,7 +227,7 @@ File prodotti nella cartella `--out`:
 | `curves.csv` | Curve di apprendimento: una riga per run, momento di valutazione e avversario |
 | `final.csv` | Valutazione finale: una riga per run e avversario, con intervallo di confidenza |
 | `summary.csv` | Media e deviazione standard tra seed del reward finale, per condizione e avversario |
-| `comparison.csv` | Memoria meno base per avversario: differenza, test t di Welch tra seed, p-value corretto con Holm; più una riga con la media sui tre avversari |
+| `comparison.csv` | Confronti a coppie (memory − basic, features − basic, features − memory) per avversario: differenza, test t di Welch tra seed, p-value corretto con Holm dentro ogni coppia; più una riga con la media sui tre avversari |
 | `<condizione>-seed<k>.json` | I pesi di ogni agente (non versionati in git) |
 
 Le altre opzioni sono le stesse di `train` (`--opponents`, `--eval-opponents`, `--eval-every`, `--eval-deals`, `--reward`, `--lr`, `--reduced`).
@@ -201,11 +241,12 @@ Per rianalizzare risultati già salvati, senza addestrare: `python -m briscola.e
 | File | Verifica |
 |---|---|
 | `tests/test_env.py` | Una partita completa: 20 decisioni dell'agente, maschera coerente con la mano, reward solo alla fine in modalità `win`. In `trick_points` i reward sommano alla differenza punti finale. Posti e avversari vengono estratti davvero; con l'avversario di mano c'è già una carta sul tavolo. Seed riproducibili, errori su azioni illegali e usi scorretti, mazzo ridotto |
+| `tests/test_features.py` | La probabilità ipergeometrica sull'esempio del primo turno (0,46 · 0,84 · 0,16); rispondendo le feature sono certe; a mazzo vuoto la probabilità è 0 o 1; `FeatureQLearner` aggiorna, salva e carica; 2.000 partite bastano a battere il random di oltre 0,3 |
 | `tests/test_learners.py` | L'aggiornamento sposta Q verso il target e solo per la carta giocata; le scelte sono sempre legali e seguono Q; salvataggio e caricamento; calendario di ε; 3.000 partite di addestramento bastano a battere il random con significatività |
 
 `tests/test_stats.py` verifica il test t di Welch contro le tavole della t di Student, la correzione di Holm e il confronto tra condizioni.
 
-In tutto il progetto ha 57 test (`python -m pytest`), che girano in circa 5 secondi.
+In tutto il progetto ha 63 test (`python -m pytest`), che girano in circa 5 secondi.
 
 ---
 

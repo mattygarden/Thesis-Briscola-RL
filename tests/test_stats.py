@@ -47,9 +47,11 @@ def test_compare_conditions():
             {"condition": "basic", "seed": seed, "opponent": "random", "mean_reward": 0.5},
             {"condition": "memory", "seed": seed, "opponent": "random", "mean_reward": 0.5 + seed / 100},
         ]
-    rows = {r["opponent"]: r for r in compare_conditions(final)}
+    rows = compare_conditions(final)
+    assert {r["comparison"] for r in rows} == {"memory - basic"}
+    rows = {r["opponent"]: r for r in rows}
     assert set(rows) == {"greedy", "random", "media"}
     assert rows["greedy"]["diff"] == pytest.approx(0.09)
     assert rows["greedy"]["p_value"] < 0.01
     assert rows["greedy"]["p_holm"] == pytest.approx(2 * rows["greedy"]["p_value"])
-    assert rows["media"]["memory"] == pytest.approx((0.20 + 0.21 + 0.19 + 1.5 + 0.03) / 6)
+    assert rows["media"]["mean_a"] == pytest.approx((0.20 + 0.21 + 0.19 + 1.5 + 0.03) / 6)
