@@ -1,0 +1,13 @@
+condition,seed,episodes,opponents,eval_opponents,eval_every,eval_deals,final_deals,reward,lr,reduced,out_dir
+basic,0,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+memory,0,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+features,0,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+basic,1,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+memory,1,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+features,1,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+basic,2,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+memory,2,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+features,2,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+basic,3,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+memory,3,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features
+features,3,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.2,False,results/memory-features

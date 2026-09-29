@@ -1,0 +1,5 @@
+condition,seed,episodes,opponents,eval_opponents,eval_every,eval_deals,final_deals,reward,lr,reduced,out_dir
+features,0,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.05,False,results/features-lr005
+features,1,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.05,False,results/features-lr005
+features,2,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.05,False,results/features-lr005
+features,3,100000,"('random', 'lowest', 'greedy')","('random', 'lowest', 'greedy')",10000,300,2000,trick_points,0.05,False,results/features-lr005

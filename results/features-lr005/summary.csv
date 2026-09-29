@@ -1,0 +1,4 @@
+condition,opponent,seeds,mean_reward,sd_across_seeds
+features,greedy,4,-0.062625,0.036886368304112925
+features,lowest,4,0.6350625,0.009845419831915074
+features,random,4,0.6520625,0.007369348116805601

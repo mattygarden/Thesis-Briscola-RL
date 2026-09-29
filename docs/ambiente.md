@@ -274,6 +274,23 @@ Esperimento `results/memory-linear` (2 condizioni × 4 seed × 100.000 partite, 
 
 Con il modello lineare la memoria **non dà un vantaggio netto**. Cambia però il profilo dell'agente: impara più lentamente all'inizio, gioca meglio contro greedy (non significativo con 4 seed, ma con varianza tra seed molto più bassa) e peggio contro lowest (significativo). L'interpretazione è nel documento di teoria.
 
+### 8b. Terza condizione: feature per carta
+
+Esperimento `results/memory-features` (3 condizioni × 4 seed × 100.000 partite, stessi parametri; base e memoria riproducono esattamente i numeri sopra) e `results/features-lr005` (solo feature, learning rate 0,05).
+
+| Avversario | Base | Memoria | Feature (lr 0,2) | Feature (lr 0,05) |
+|---|---|---|---|---|
+| random | +0,543 | +0,531 | +0,613 | **+0,652** |
+| lowest | +0,524 | +0,477 | +0,635 | **+0,635** |
+| greedy | +0,048 | **+0,113** | −0,157 | −0,063 |
+| Media dei tre | +0,371 | +0,374 | +0,364 | **+0,408** |
+
+- Le feature fanno imparare **molto più in fretta**: dopo 10.000 partite l'agente a feature batte il random di circa +0,6, un livello che il learner sul vettore stato non raggiunge nemmeno a 100.000.
+- Con lr 0,05 l'agente a feature è il migliore in media (+0,037 sulla base, p = 0,019) e contro random e lowest (p < 0,001 dopo Holm).
+- **Contro greedy resta sotto** base e memoria (−0,110 sulla base, p Holm = 0,025): la curva si ferma intorno a 0 già dopo 10.000 partite. Con 16 pesi condivisi il modello sembra non riuscire a rappresentare la contro-strategia a greedy.
+- Con lr 0,2 le curve oscillano: 16 pesi condivisi da tutte le carte reagiscono troppo a ogni aggiornamento.
+- Cautela: il learning rate 0,05 è stato scelto guardando gli stessi avversari di valutazione (come lo 0,2 per il learner lineare). Per la tesi la taratura va fatta su mazzi separati.
+
 ---
 
 ## 9. Limiti e prossimi passi
